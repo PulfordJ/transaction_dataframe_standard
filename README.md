@@ -1,6 +1,6 @@
 The goal of this project is to standardise cash bank account transaction dataframes for the purposes of processing in Pandas. 
 
-With that goal in mind this project has two halfs, one half provides adapters. For example the below CSV data is similar to a real Monzo CSV output:
+With that goal in mind this project has two halves, one half provides adapters. For example the below CSV data is similar to a real Monzo CSV output:
 
 
 Transaction ID      Time                  Type                 Name Emoji Category   Amount Currency  Local amount Local currency Notes and #tags  Address  Receipt                               Description  Category split  Money Out  Money In
