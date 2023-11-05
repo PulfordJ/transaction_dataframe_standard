@@ -1,0 +1,5 @@
+Transaction ID,Date,Time,Type,Name,Emoji,Category,Amount,Currency,Local amount,Local currency,Notes and #tags,Address,Receipt,Description,Category split,Money Out,Money In
+tx_0000TwgfJoVst7ORW5,24/08/2020,15:40:42,Bacs (Direct Credit),Employment Example,,Income,2000.28,GBP,2000.28,GBP,MONZO BANK,,,MONZO BANK,,,2000.28
+tx_0000TwgfJoVst7ORW5,25/08/2020,15:40:42,Bacs (Direct Credit),Employment Example,,Income,2000.28,GBP,2000.28,GBP,MONZO BANK,,,MONZO BANK,,,2000.28
+tx_00003QvviyBMCQatl,25/09/2020,16:10:45,Faster payment,HELPTOBUY,,General,-136.86,GBP,-136.86,GBP,HELPTOBUY,,,HELPTOBUY,,-136.86,
+tx_0000PpkTbQcjCMuOy2N,03/10/2020,09:06:17,Card payment,Amazon Web Services,☁️,Bills,-0.93,GBP,-1.20,USD,,,,AWS EMEA               aws.amazon.co LUX,,-0.93,
