@@ -1,3 +1,4 @@
+Tether requirements.txt to a specific Pandas? same with other dependencies.
 - For columns "Money In" and "Money Out" perhaps we should use 0 instead of NaN.
 - How would this standard handle investment accounts, e.g buying/selling a fund/stocks? Should it?
 - Could an adapter be made for the open api?

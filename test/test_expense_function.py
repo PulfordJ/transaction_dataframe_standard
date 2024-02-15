@@ -17,4 +17,4 @@ def test_expense_function():
     # TODO build test to ensure excluded_names are removed from data frame.
     excluded_names = {"Vanguard", "Hargreaves Lansdown", "TradingView", "HMRC"}
     # TODO actually break this down into testable outputs, right now I'm just testing that it doesn't fail to execute.
-    print_expense_stats_trailing_twelve_months(transactions, excluded_names, datetime(2020, 10, 28))
+    print_expense_stats_trailing_twelve_months(transactions, excluded_names, datetime(2020, 10, 28), datetime(2019, 10, 28))
