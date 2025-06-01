@@ -22,6 +22,11 @@ class MonzoTransactionsAdapter:
                      "Notes and #tags",
                      "Receipt", "Local amount", "Amount"], inplace=True)
 
+        #df.loc[df['First Season'] > 1990, 'First Season']
+        self._transactions.loc[self._transactions["Type"] == "Flex", "Name"] = "Flex"
+        #print(self._transactions[self._transactions["Type"] == "Flex"])
+
+
         @property
         def transactions(self):
             # space-inefficient but guarantees the internal data is read-only externally
