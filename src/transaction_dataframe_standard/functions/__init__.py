@@ -111,6 +111,8 @@ def print_expense_stats_trailing_twelve_months(transactions, excluded_names, las
     beginning_of_last_month_date = last_day.replace(day=1)
     beginning_of_last_month_date_string = get_date_string(beginning_of_last_month_date)
     df_last_month = daily_expenses.loc[beginning_of_last_month_date_string:last_day_string]
+
+
     # More detail on top 20 expenses for last month
     print()
     print("Total last month:")

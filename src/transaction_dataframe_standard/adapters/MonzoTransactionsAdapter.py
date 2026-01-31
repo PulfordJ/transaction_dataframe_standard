@@ -9,12 +9,18 @@ class MonzoTransactionsAdapter:
         # self._transactions = pd.concat(
         #     (pd.read_csv(f, sep=',', parse_dates=["Date"], dayfirst=True, index_col="Date") for f in all_files))
 
-        self._transactions = pd.read_csv(filepath, sep=',', parse_dates=["Date"], dayfirst=True, index_col="Date")
+        self._transactions = pd.read_csv(filepath, sep=',', dayfirst=True)
 
-        print()
-        print(self._transactions)
+        # Strip any accidental whitespace in column names (common cause of issues)
+        self._transactions.columns = self._transactions.columns.str.strip()
 
-        self._transactions.sort_values(by="Date", inplace=True)
+        # Combine Date and Time columns manually
+        self._transactions['DateTime'] = pd.to_datetime(self._transactions['Date'] + ' ' + self._transactions['Time'], dayfirst=True)
+
+        # Set combined DateTime as index
+        self._transactions.set_index('DateTime', inplace=True)
+
+        self._transactions.sort_index(inplace=True)
 
         # All these columns irrelevant for the standard.
         self._transactions.drop(
