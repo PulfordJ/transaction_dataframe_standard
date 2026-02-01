@@ -34,12 +34,13 @@ VANGUARD_FUND_MAPPINGS = [
 ]
 
 
-def fund_name_to_ticker(fund_name: str) -> str:
+def fund_name_to_ticker(fund_name: str, is_oeic: bool = False) -> str:
     """
     Convert Vanguard fund name to ticker symbol.
 
     Args:
         fund_name: Fund name as it appears in transaction details
+        is_oeic: True if this is an OEIC/unit trust (has Accumulation/Income suffix)
 
     Returns:
         Ticker symbol, or fund_name prefixed with 'FUND:' if not found
@@ -52,6 +53,9 @@ def fund_name_to_ticker(fund_name: str) -> str:
     # Try each pattern
     for pattern, ticker in VANGUARD_FUND_MAPPINGS:
         if re.search(pattern, fund_name_clean, re.IGNORECASE):
+            # Append -OEIC suffix for OEICs to distinguish from ETFs
+            if is_oeic:
+                return f"{ticker}-OEIC"
             return ticker
 
     # Not found - return with prefix to indicate it's unmapped
@@ -70,20 +74,23 @@ def is_fund_mapped(fund_name: str) -> bool:
     return False
 
 
-def extract_fund_name_from_details(details: str) -> tuple[str, float]:
+def extract_fund_name_from_details(details: str) -> tuple[str, float, bool]:
     """
-    Extract fund name and units from transaction details.
+    Extract fund name, units, and OEIC status from transaction details.
 
     Vanguard transaction details format examples:
-    - "Bought 48.2405 U.S. Equity Index Fund - Accumulation"
-    - "Sold 116.4353 U.S. Equity Index Fund - Accumulation"
-    - "DIV: 2.0000 FTSE Developed Asia Pacific ex-Japan UCITS ETF"
+    - "Bought 48.2405 U.S. Equity Index Fund - Accumulation" (OEIC)
+    - "Sold 116.4353 U.S. Equity Index Fund - Accumulation" (OEIC)
+    - "DIV: 2.0000 FTSE Developed Asia Pacific ex-Japan UCITS ETF" (ETF)
 
     Returns:
-        (fund_name, units) tuple
+        (fund_name, units, is_oeic) tuple
     """
     if not details:
-        return (None, None)
+        return (None, None, False)
+
+    # Check if this is an OEIC (has Accumulation or Income suffix)
+    is_oeic = bool(re.search(r'-\s*(?:Accumulation|Income)', details, re.IGNORECASE))
 
     # Pattern for Buy/Sell: "Bought/Sold X.XXX Fund Name"
     buy_sell_pattern = r'(?:Bought|Sold)\s+([\d,.]+)\s+(.+?)(?:\s*-\s*Accumulation|\s*-\s*Income|\s*\(.*?\))?$'
@@ -96,7 +103,7 @@ def extract_fund_name_from_details(details: str) -> tuple[str, float]:
             units = float(units_str)
         except:
             units = None
-        return (fund_name, units)
+        return (fund_name, units, is_oeic)
 
     # Pattern for Dividend: "DIV: X.XXXX Fund Name"
     div_pattern = r'DIV:\s+([\d,.]+)\s+(.+?)(?:\s*-\s*Accumulation|\s*-\s*Income)?$'
@@ -109,6 +116,6 @@ def extract_fund_name_from_details(details: str) -> tuple[str, float]:
             units = float(units_str)
         except:
             units = None
-        return (fund_name, units)
+        return (fund_name, units, is_oeic)
 
-    return (None, None)
+    return (None, None, False)

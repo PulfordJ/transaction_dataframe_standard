@@ -283,14 +283,14 @@ class VanguardTransactionsAdapter:
         """
         details_lower = details.lower()
 
-        # Extract fund name and units if this is an investment transaction
-        fund_name, units = extract_fund_name_from_details(details)
+        # Extract fund name, units, and OEIC status if this is an investment transaction
+        fund_name, units, is_oeic = extract_fund_name_from_details(details)
 
         asset_ticker = None
         price_per_unit = None
 
         if fund_name:
-            asset_ticker = fund_name_to_ticker(fund_name)
+            asset_ticker = fund_name_to_ticker(fund_name, is_oeic=is_oeic)
 
             # Calculate price per unit if we have units and amount
             if units and units != 0 and amount != 0:
