@@ -59,19 +59,16 @@ class MonzoTransactionsAdapter:
             date = row['DateTime'].date()
             time = row['DateTime'].time()
 
+            # Get amount directly from CSV (already has correct sign)
+            amount = float(row.get('Amount', 0) or 0)
+
             # Determine transaction type and category
             transaction_type, category = self._classify_transaction(
                 monzo_type=str(row.get('Type', '')),
                 monzo_category=str(row.get('Category', '')),
-                money_in=float(row.get('Money In', 0) or 0),
-                money_out=float(row.get('Money Out', 0) or 0),
+                amount=amount,
                 name=str(row.get('Name', ''))
             )
-
-            # Calculate amount (positive for income, negative for expenses)
-            money_in = float(row.get('Money In', 0) or 0)
-            money_out = float(row.get('Money Out', 0) or 0)
-            amount = money_in - money_out
 
             # Build notes from available fields
             notes_parts = []
@@ -121,8 +118,7 @@ class MonzoTransactionsAdapter:
         self,
         monzo_type: str,
         monzo_category: str,
-        money_in: float,
-        money_out: float,
+        amount: float,
         name: str
     ) -> tuple[str, str]:
         """
@@ -131,8 +127,7 @@ class MonzoTransactionsAdapter:
         Args:
             monzo_type: Monzo transaction type
             monzo_category: Monzo category
-            money_in: Amount received
-            money_out: Amount spent
+            amount: Transaction amount (positive for income, negative for expenses)
             name: Payee/merchant name
 
         Returns:
@@ -147,8 +142,8 @@ class MonzoTransactionsAdapter:
         if 'transfer' in monzo_type_lower or 'pot transfer' in monzo_type_lower:
             return (TransactionType.TRANSFER.value, 'Account Transfer')
 
-        # Handle income
-        if money_in > 0 and money_out == 0:
+        # Handle income (positive amounts)
+        if amount > 0:
             # Check for specific income types
             if 'salary' in name_lower or 'wages' in name_lower:
                 return (TransactionType.INCOME.value, 'Salary')
@@ -159,8 +154,8 @@ class MonzoTransactionsAdapter:
             else:
                 return (TransactionType.INCOME.value, 'Other Income')
 
-        # Handle expenses
-        if money_out > 0:
+        # Handle expenses (negative amounts)
+        if amount < 0:
             # Map Monzo categories to our categories
             category_mapping = {
                 'groceries': 'Groceries',
