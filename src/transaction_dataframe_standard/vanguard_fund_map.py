@@ -89,8 +89,9 @@ def extract_fund_name_from_details(details: str) -> tuple[str, float, bool]:
     if not details:
         return (None, None, False)
 
-    # Check if this is an OEIC (has Accumulation or Income suffix)
-    is_oeic = bool(re.search(r'-\s*(?:Accumulation|Income)', details, re.IGNORECASE))
+    # Check if this is an OEIC (has Accumulation or Income suffix, with or without hyphen)
+    # Matches both "Fund - Accumulation" and "Unit Trust Accumulation"
+    is_oeic = bool(re.search(r'(?:-\s*)?(?:Unit Trust\s+)?(?:Accumulation|Income)\b', details, re.IGNORECASE))
 
     # Pattern for Buy/Sell: "Bought/Sold X.XXX Fund Name"
     buy_sell_pattern = r'(?:Bought|Sold)\s+([\d,.]+)\s+(.+?)(?:\s*-\s*Accumulation|\s*-\s*Income|\s*\(.*?\))?$'
