@@ -279,8 +279,8 @@ class HalifaxSIPPAdapter:
 
         # VANGUARD INVESTMENT SERIES PLC
         if 'vanguard investment series' in fund_lower:
-            # This appears to be VUSA-OEIC based on the sale amount (~£354/unit)
-            return 'VUSA-OEIC'
+            # This is VFEG-OEIC based on the sale price (£354/unit matches VFEG-OEIC, not VUSA-OEIC £955/unit)
+            return 'VFEG-OEIC'
 
         # Return unknown ticker with prefix
         return f'SIPP:{fund_name[:20].upper().replace(" ", "-")}'
