@@ -142,6 +142,18 @@ class MonzoTransactionsAdapter:
         if 'transfer' in monzo_type_lower or 'pot transfer' in monzo_type_lower:
             return (TransactionType.TRANSFER.value, 'Account Transfer')
 
+        # Handle transfers to investment platforms (these are not expenses, but fund transfers)
+        # Only classify large amounts (>£100) as transfers; small amounts are platform fees
+        investment_platforms = ['vanguard', 'halifax share dealing', 'hargreaves lansdown', 'hl.co.uk']
+        is_investment_platform = any(platform in name_lower for platform in investment_platforms)
+
+        if is_investment_platform and amount < 0:
+            # Large transfers (>£100 or >£1000) are fund transfers, not expenses
+            if abs(amount) >= 100:
+                return (TransactionType.TRANSFER.value, 'Investment Account Transfer')
+            # Small amounts are platform fees/charges (actual expenses)
+            # Fall through to normal expense handling
+
         # Handle income (positive amounts)
         if amount > 0:
             # Check for specific income types
