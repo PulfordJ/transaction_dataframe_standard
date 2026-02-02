@@ -272,9 +272,10 @@ class HalifaxSIPPAdapter:
         """Map SIPP fund names to tickers."""
         fund_lower = fund_name.lower()
 
-        # HSBC INDEX TRACKER INVESTMENT FUNDS - FTSE ALL WORLD INDEX C ACC
-        if 'hsbc' in fund_lower and 'ftse all world' in fund_lower:
-            return 'HSBC-FTSE-ALL-WORLD'
+        # HSBC INDEX TRACKER INVESTMENT FUNDS - This is the same as Halifax's MDAABG
+        # (HSBC FTSE All World Index Fund - verified by matching purchase prices)
+        if 'hsbc' in fund_lower and 'index tracker' in fund_lower:
+            return 'MDAABG'
 
         # VANGUARD INVESTMENT SERIES PLC
         if 'vanguard investment series' in fund_lower:
