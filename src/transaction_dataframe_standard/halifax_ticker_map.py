@@ -8,7 +8,7 @@ Halifax uses internal fund codes that need to be mapped to recognizable tickers.
 # Halifax fund ticker mappings
 HALIFAX_TICKER_MAP = {
     'MDAABG': 'MDAABG',  # Halifax unit trust - Yahoo Finance ticker: 0P00013P6I.L (£2.55-3.76)
-    'VRXXC': 'VUSA',     # Vanguard S&P 500 UCITS ETF
+    'VRXXC': 'VUKE-OEIC',  # Vanguard UK Equity Index Fund - OEIC (£150-210 per unit)
     'VAPX': 'VAPX',      # Vanguard Asia Pacific ex Japan ETF
     'VVUSEI': 'VUSA-OEIC',  # Vanguard US Equity Index Fund - OEIC (£900+ per unit)
 
