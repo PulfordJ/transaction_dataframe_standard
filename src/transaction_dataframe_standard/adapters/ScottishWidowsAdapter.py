@@ -156,87 +156,32 @@ class ScottishWidowsAdapter:
 
     def _handle_amc_adjustment(self, row) -> List[Dict]:
         """
-        AMC Adjustment → Buy or Sell depending on sign
-        Positive amounts/units = bonus units added (treat as Buy)
-        Negative amounts/units = fee deduction (treat as Sell)
+        AMC Adjustment → Fee (Annual Management Charge)
+        These are expenses deducted from the fund
         """
         date = row['DATE']
         amount = float(str(row['VALUE (£)']).replace(',', ''))
         fund = str(row['FUNDS']).strip()
-        ticker = FUND_TICKER_MAP.get(fund, f"SW-{fund[:20].replace(' ', '-')}")
 
-        # Check if there are units
-        units_str = str(row['UNITS']).replace(',', '').strip()
-        has_units = units_str and units_str not in ['', 'nan', '0', '0.0']
-
-        if has_units:
-            units = float(units_str)
-            bid_price_pence = float(str(row['BID PRICE (p)']).replace(',', ''))
-            price_per_unit = bid_price_pence / 100
-
-            if units > 0:
-                # Positive units = bonus/rebate units added
-                return [{
-                    'date': date,
-                    'time': None,
-                    'account': self.account_name,
-                    'account_type': self.account_type,
-                    'transaction_type': 'Buy',
-                    'category': 'AMC Rebate',
-                    'amount': -amount,  # Negative (using cash to buy units)
-                    'currency': 'GBP',
-                    'asset_ticker': ticker,
-                    'units': units,
-                    'price_per_unit': price_per_unit,
-                    'notes': f"AMC Adjustment: {units:.4f} units of {fund} added at £{price_per_unit:.4f}",
-                    'country': 'UK',
-                    'city': None,
-                    'is_pension_contribution': False,
-                    'data_source': self.csv_path.name,
-                    'data_quality': 'Verified'
-                }]
-            else:
-                # Negative units = fee deduction (removing units)
-                return [{
-                    'date': date,
-                    'time': None,
-                    'account': self.account_name,
-                    'account_type': self.account_type,
-                    'transaction_type': 'Sell',
-                    'category': 'AMC Fee',
-                    'amount': abs(amount),  # Positive (receiving cash from sale)
-                    'currency': 'GBP',
-                    'asset_ticker': ticker,
-                    'units': abs(units),
-                    'price_per_unit': price_per_unit,
-                    'notes': f"AMC Adjustment: {abs(units):.4f} units of {fund} removed at £{price_per_unit:.4f}",
-                    'country': 'UK',
-                    'city': None,
-                    'is_pension_contribution': False,
-                    'data_source': self.csv_path.name,
-                    'data_quality': 'Verified'
-                }]
-        else:
-            # No units, just a fee
-            return [{
-                'date': date,
-                'time': None,
-                'account': self.account_name,
-                'account_type': self.account_type,
-                'transaction_type': 'Fee',
-                'category': 'Annual Management Charge',
-                'amount': amount,
-                'currency': 'GBP',
-                'asset_ticker': None,
-                'units': None,
-                'price_per_unit': None,
-                'notes': f"AMC Adjustment - {fund}",
-                'country': 'UK',
-                'city': None,
-                'is_pension_contribution': False,
-                'data_source': self.csv_path.name,
-                'data_quality': 'Verified'
-            }]
+        return [{
+            'date': date,
+            'time': None,
+            'account': self.account_name,
+            'account_type': self.account_type,
+            'transaction_type': 'Fee',
+            'category': 'Annual Management Charge',
+            'amount': amount,  # Should be positive (represents cost)
+            'currency': 'GBP',
+            'asset_ticker': None,
+            'units': None,
+            'price_per_unit': None,
+            'notes': f"AMC Adjustment - {fund}",
+            'country': 'UK',
+            'city': None,
+            'is_pension_contribution': False,
+            'data_source': self.csv_path.name,
+            'data_quality': 'Verified'
+        }]
 
     def _handle_switch_buy(self, row) -> List[Dict]:
         """
@@ -370,86 +315,26 @@ class ScottishWidowsAdapter:
 
             return transactions
 
-        # Normal admin charge
-        # Check if there are units (some admin charges reduce unit count)
-        units_str = str(row['UNITS']).replace(',', '').strip()
-        has_units = units_str and units_str not in ['', 'nan', '0', '0.0']
-
-        transactions = []
-
-        if has_units:
-            # Admin charge with unit reduction (e.g., monthly admin fees that sell units)
-            units = float(units_str)
-            bid_price_pence = float(str(row['BID PRICE (p)']).replace(',', ''))
-            price_per_unit = bid_price_pence / 100
-
-            # Sell transaction for the units being liquidated
-            sell_txn = {
-                'date': date,
-                'time': None,
-                'account': self.account_name,
-                'account_type': self.account_type,
-                'transaction_type': 'Sell',
-                'category': 'Admin Fee - Unit Liquidation',
-                'amount': abs(amount),  # Positive (cash received from unit sale)
-                'currency': 'GBP',
-                'asset_ticker': ticker,
-                'units': abs(units),  # Positive units sold
-                'price_per_unit': price_per_unit,
-                'notes': f"SW Admin Fee: {abs(units):.4f} units of {fund} sold at £{price_per_unit:.4f}",
-                'country': 'UK',
-                'city': None,
-                'is_pension_contribution': False,
-                'data_source': self.csv_path.name,
-                'data_quality': 'Verified'
-            }
-            transactions.append(sell_txn)
-
-            # Fee transaction for the admin charge (cash outflow)
-            fee_txn = {
-                'date': date,
-                'time': None,
-                'account': self.account_name,
-                'account_type': self.account_type,
-                'transaction_type': 'Fee',
-                'category': 'Administrative Fee',
-                'amount': -abs(amount),  # Negative (cost)
-                'currency': 'GBP',
-                'asset_ticker': None,
-                'units': None,
-                'price_per_unit': None,
-                'notes': f"SW Admin Charge - {fund}",
-                'country': 'UK',
-                'city': None,
-                'is_pension_contribution': False,
-                'data_source': self.csv_path.name,
-                'data_quality': 'Verified'
-            }
-            transactions.append(fee_txn)
-        else:
-            # Simple fee without unit changes
-            fee_txn = {
-                'date': date,
-                'time': None,
-                'account': self.account_name,
-                'account_type': self.account_type,
-                'transaction_type': 'Fee',
-                'category': 'Administrative Fee',
-                'amount': abs(amount),  # Make positive (represents cost)
-                'currency': 'GBP',
-                'asset_ticker': None,
-                'units': None,
-                'price_per_unit': None,
-                'notes': f"SW Admin Charge - {fund}",
-                'country': 'UK',
-                'city': None,
-                'is_pension_contribution': False,
-                'data_source': self.csv_path.name,
-                'data_quality': 'Verified'
-            }
-            transactions.append(fee_txn)
-
-        return transactions
+        # Normal admin charge - fee
+        return [{
+            'date': date,
+            'time': None,
+            'account': self.account_name,
+            'account_type': self.account_type,
+            'transaction_type': 'Fee',
+            'category': 'Administrative Fee',
+            'amount': abs(amount),  # Make positive (represents cost)
+            'currency': 'GBP',
+            'asset_ticker': None,
+            'units': None,
+            'price_per_unit': None,
+            'notes': f"SW Admin Charge - {fund}",
+            'country': 'UK',
+            'city': None,
+            'is_pension_contribution': False,
+            'data_source': self.csv_path.name,
+            'data_quality': 'Verified'
+        }]
 
     def verify_prices(self) -> List[Dict]:
         """
