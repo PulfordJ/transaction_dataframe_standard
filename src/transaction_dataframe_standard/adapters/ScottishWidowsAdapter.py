@@ -253,14 +253,46 @@ class ScottishWidowsAdapter:
         """
         SW Admin Charge → Usually Fee, but final exit is Withdrawal
         The final £177k charge represents the pension transfer out to Halifax SIPP
+        For final exit, need to sell all units first, then withdraw cash
         """
         date = row['DATE']
         amount = float(str(row['VALUE (£)']).replace(',', ''))
         fund = str(row['FUNDS']).strip()
+        ticker = FUND_TICKER_MAP.get(fund, f"SW-{fund[:20].replace(' ', '-')}")
 
         # Special case: final exit transfer (2023-09-07, ~£177k)
+        # This has units that need to be sold before withdrawal
         if date.year == 2023 and date.month == 9 and abs(amount) > 100000:
-            return [{
+            units = float(str(row['UNITS']).replace(',', ''))
+            bid_price_pence = float(str(row['BID PRICE (p)']).replace(',', ''))
+            price_per_unit = bid_price_pence / 100
+
+            transactions = []
+
+            # 1. Sell transaction (liquidate all holdings)
+            sell_txn = {
+                'date': date,
+                'time': None,
+                'account': self.account_name,
+                'account_type': self.account_type,
+                'transaction_type': 'Sell',
+                'category': 'Pension Exit - Fund Liquidation',
+                'amount': abs(amount),  # Positive (cash inflow from sale)
+                'currency': 'GBP',
+                'asset_ticker': ticker,
+                'units': abs(units),  # Positive units sold
+                'price_per_unit': price_per_unit,
+                'notes': f"SW Exit Sale: {abs(units):,.2f} units of {fund} at £{price_per_unit:.4f}",
+                'country': 'UK',
+                'city': None,
+                'is_pension_contribution': False,
+                'data_source': self.csv_path.name,
+                'data_quality': 'Verified'
+            }
+            transactions.append(sell_txn)
+
+            # 2. Withdrawal transaction (transfer cash out)
+            withdrawal_txn = {
                 'date': date,
                 'time': None,
                 'account': self.account_name,
@@ -278,7 +310,10 @@ class ScottishWidowsAdapter:
                 'is_pension_contribution': False,
                 'data_source': self.csv_path.name,
                 'data_quality': 'Verified'
-            }]
+            }
+            transactions.append(withdrawal_txn)
+
+            return transactions
 
         # Normal admin charge - fee
         return [{
