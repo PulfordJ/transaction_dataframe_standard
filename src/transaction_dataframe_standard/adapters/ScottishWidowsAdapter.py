@@ -236,7 +236,7 @@ class ScottishWidowsAdapter:
             'account_type': self.account_type,
             'transaction_type': 'Sell',
             'category': 'Fund Switch',
-            'amount': amount,  # Positive (cash inflow from sale)
+            'amount': abs(amount),  # Positive (cash inflow from sale)
             'currency': 'GBP',
             'asset_ticker': ticker,
             'units': abs(units),  # Units should be positive for Sell
