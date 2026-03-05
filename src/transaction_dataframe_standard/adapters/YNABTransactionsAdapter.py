@@ -146,7 +146,8 @@ class YNABTransactionsAdapter:
             is_transfer = True
 
             # Create transfer ID to track both sides
-            transfer_id = f"{txn_date.date()}_{abs(amount):.2f}_{account}"
+            # Include payee to differentiate multiple transfers on same day with same amount
+            transfer_id = f"{txn_date.date()}_{abs(amount):.2f}_{account}_{payee}"
 
             # Check if we've seen the other side of this transfer
             if transfer_id in transfers_seen:
