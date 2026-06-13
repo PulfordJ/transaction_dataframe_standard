@@ -78,6 +78,8 @@ class MonzoTransactionsAdapter:
                 notes_parts.append(f"Description: {row['Description']}")
             if row.get('Notes and #tags') and str(row['Notes and #tags']) != 'nan':
                 notes_parts.append(f"Notes: {row['Notes and #tags']}")
+            if row.get('Address') and str(row['Address']) != 'nan':
+                notes_parts.append(f"Address: {row['Address']}")
 
             notes = " | ".join(notes_parts) if notes_parts else None
 

@@ -149,38 +149,53 @@ class MSCreditCardAdapter:
 
         return transactions
 
-    def _clean_merchant_name(self, description: str) -> str:
+    def _parse_merchant_location(self, description: str) -> tuple:
         """
-        Clean merchant name by removing location suffixes.
+        Parse merchant description to extract clean name, city, and country.
 
-        M&S includes location like "Merchant City Country" or "Merchant City Lnd"
-        This removes the location suffix to match Monzo's cleaner format.
+        M&S includes location like "Merchant City Country" or "Merchant City Lnd".
 
         Examples:
-            "Harley Street Dental S London Gbr" -> "Harley Street Dental S"
-            "Deliveroo London Lnd" -> "Deliveroo"
-            ")))Mcdonalds London Ec2m Gbr" -> ")))Mcdonalds"
+            "Harley Street Dental S London Gbr" -> ("Harley Street Dental S", "London", "UK")
+            "Deliveroo London Lnd" -> ("Deliveroo", "London", "UK")
+            "Amazon Paris Fra" -> ("Amazon", "Paris", "France")
+
+        Returns:
+            (cleaned_name, city, country)
         """
-        # Country codes commonly seen in M&S statements
         country_codes = [
             'Gbr', 'Lnd', 'Eng', 'Lux', 'Isr', 'Deu', 'Esp', 'Nld',
             'Ca', 'Irl', 'Usa', 'Fra', 'Bel', 'Che', 'Aut', 'Prt'
         ]
+        country_code_map = {
+            'gbr': 'UK', 'lnd': 'UK', 'eng': 'UK',
+            'fra': 'France', 'deu': 'Germany', 'esp': 'Spain',
+            'nld': 'Netherlands', 'irl': 'Ireland', 'usa': 'USA',
+            'isr': 'Israel', 'lux': 'Luxembourg', 'bel': 'Belgium',
+            'che': 'Switzerland', 'aut': 'Austria', 'prt': 'Portugal',
+            'ca': 'Canada',
+        }
 
-        # Build regex pattern to match " City CountryCode" at end
-        # Handles multi-part cities like "London Ec2m Gbr"
         country_pattern = '|'.join(country_codes)
+        city = None
+        country = 'UK'
 
         # Pattern 1: " City [AreaCode] CountryCode" at end
-        # Matches: " London Gbr", " London Ec2m Gbr", " Leeds Eng", etc.
-        pattern = r'\s+[A-Z][a-z]+(?:\s+[A-Z][a-z0-9]+)?\s+(?:' + country_pattern + r')$'
-        cleaned = re.sub(pattern, '', description, flags=re.IGNORECASE)
+        pat1 = r'\s+([A-Z][a-z]+)(?:\s+[A-Z][a-z0-9]+)?\s+((?:' + country_pattern + r'))$'
+        m1 = re.search(pat1, description, flags=re.IGNORECASE)
+        if m1:
+            city = m1.group(1).strip()
+            country = country_code_map.get(m1.group(2).lower(), 'UK')
+            cleaned = re.sub(pat1, '', description, flags=re.IGNORECASE).strip()
+        else:
+            # Pattern 2: Just " CountryCode" at end (no city)
+            pat2 = r'\s+((?:' + country_pattern + r'))$'
+            m2 = re.search(pat2, description, flags=re.IGNORECASE)
+            if m2:
+                country = country_code_map.get(m2.group(1).lower(), 'UK')
+            cleaned = re.sub(r'\s+(?:' + country_pattern + r')$', '', description, flags=re.IGNORECASE).strip()
 
-        # Pattern 2: Just " CountryCode" at end (for cases without city)
-        pattern2 = r'\s+(?:' + country_pattern + r')$'
-        cleaned = re.sub(pattern2, '', cleaned, flags=re.IGNORECASE)
-
-        return cleaned.strip()
+        return cleaned, city, country
 
     def _extract_payee(self, description: str) -> str:
         """
@@ -306,8 +321,8 @@ class MSCreditCardAdapter:
         description = match.group(3).strip()
         amount_str = match.group(4)
 
-        # Clean merchant name (remove location suffixes like "London Gbr")
-        description = self._clean_merchant_name(description)
+        # Parse location from description (extracts city/country and cleans name)
+        description, city, country = self._parse_merchant_location(description)
 
         # Extract normalized payee name
         payee = self._extract_payee(description)
@@ -343,8 +358,8 @@ class MSCreditCardAdapter:
             'units': None,
             'price_per_unit': None,
             'notes': notes,
-            'country': 'UK',
-            'city': None,
+            'country': country,
+            'city': city,
             'is_pension_contribution': False,
             'data_source': source_file.name,
             'data_quality': DataQuality.VERIFIED.value
