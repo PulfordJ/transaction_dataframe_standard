@@ -149,6 +149,37 @@ class MSCreditCardAdapter:
 
         return transactions
 
+    # Words that look like capitalized place-names but are actually merchant name
+    # fragments, company suffixes, generic nouns, or PDF truncation artifacts.
+    # Any city extracted by the regex that matches one of these is discarded.
+    _NON_CITY_WORDS = {
+        # Company / legal suffixes
+        'Ltd', 'Limited', 'Plc', 'Llp', 'Inc', 'Corp', 'Group', 'Gmb',
+        'International',
+        # Generic business / product words
+        'Bus', 'Online', 'Website', 'Membership', 'Purchase', 'Eat', 'Coffee',
+        'Food', 'Travel', 'Stores', 'Store', 'Service', 'Services', 'Kiosk',
+        'Counter', 'Restaurant', 'Testing', 'Pharmacy', 'Cinemas', 'Cinema',
+        'Golf', 'Grill', 'Internet', 'Parking', 'Practice', 'Office',
+        'Imaging', 'Science', 'Desk', 'Shop', 'Net', 'Fares', 'Room',
+        'Driver', 'Trip', 'Climbing', 'Spa', 'Tax', 'Tel', 'Court',
+        'King', 'Bar', 'Garden', 'Rocket', 'Planet', 'Punks', 'Sushi',
+        'Street', 'Bird', 'Galore', 'Indigo', 'Apollo', 'Broad', 'Samba',
+        'Trails', 'House', 'Greek', 'Truman', 'Sevens',
+        # Directional / partial words that bleed from merchant names
+        'East', 'West', 'North', 'South', 'Old', 'New',
+        # Utility / transport fragments
+        'Water', 'Fares',
+        # Truncated words from PDF line-wrap
+        'Gro', 'Gar', 'Dps', 'Livstreet', 'Leadenha', 'Mchester',
+        'Birmingh', 'Restaur', 'Servic', 'Patisseri', 'Climbin',
+        # Clearly wrong: country names, partial city fragments, brand noise
+        'Uk', 'Limit', 'Marks', 'Wombatscityhostel', 'Beachcomber',
+        'Sterling', 'Eagle', 'Los', 'San', 'Resort', 'Maypole', 'Canton',
+        'Cherry', 'Bongs', 'Yorke', 'Smith', 'Hounds', 'Spencer', 'Tudge',
+        'Cox', 'Limite', 'Membershippat', 'Maxx', 'Water',
+    }
+
     def _parse_merchant_location(self, description: str) -> tuple:
         """
         Parse merchant description to extract clean name, city, and country.
@@ -184,9 +215,12 @@ class MSCreditCardAdapter:
         pat1 = r'\s+([A-Z][a-z]+)(?:\s+[A-Z][a-z0-9]+)?\s+((?:' + country_pattern + r'))$'
         m1 = re.search(pat1, description, flags=re.IGNORECASE)
         if m1:
-            city = m1.group(1).strip()
+            candidate = m1.group(1).strip()
             country = country_code_map.get(m1.group(2).lower(), 'UK')
             cleaned = re.sub(pat1, '', description, flags=re.IGNORECASE).strip()
+            # Discard if it's a known non-city word or a short fragment (< 3 chars)
+            if len(candidate) >= 3 and candidate not in self._NON_CITY_WORDS:
+                city = candidate
         else:
             # Pattern 2: Just " CountryCode" at end (no city)
             pat2 = r'\s+((?:' + country_pattern + r'))$'
