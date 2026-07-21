@@ -2,17 +2,25 @@
 LemFi Bank Adapter
 
 Parses LemFi (RightCard Payment Services / ClearBank) savings-account statement
-PDFs. LemFi issues a single "Statement of Account" for the Instant Access
-Savings Account with a transaction table:
+PDFs. LemFi issues a "Statement of Account" per account, all sharing the same
+transaction table:
 
     DATE TYPE DESCRIPTION MONEY OUT MONEY IN BALANCE
     14 Jul, 2026 20:18 Credit Desc: Savings Funding £0.00 £100.00 £100
     17 Jul, 2026 06:43 Debit  Desc: Savings Withdrawal £10.00 £0.00 £90
 
+There are two account types:
+  - Instant Access Savings account (interest-bearing)
+  - GBP (main) account — a pass-through wallet that receives money from John's
+    external bank and forwards it to the savings account
+
+The account a statement belongs to is auto-detected from its header, so all
+LemFi PDFs can be passed to a single adapter and are kept as separate accounts.
+
 Each row carries explicit Money Out / Money In / Balance columns, so direction
 is unambiguous. Like the Monument savings accounts this holds John's own money:
-"Savings Funding" (Credit) and "Savings Withdrawal" (Debit) are transfers
-between his accounts, and interest is the only genuine new money.
+funding/withdrawals are transfers between his accounts, and interest is the
+only genuine new money.
 
 Account Type: Savings
 Data Quality: Verified (official bank PDF statements)
@@ -46,17 +54,26 @@ class LemFiBankAdapter:
         r'£(?P<bal>[\d,]+(?:\.\d{2})?)\s*$'
     )
 
-    def __init__(self, pdf_paths, account_name: str = "LemFi Instant Access Savings"):
+    def __init__(self, pdf_paths, account_name: Optional[str] = None):
         """
         Args:
             pdf_paths: A single path or list of paths to LemFi statement PDFs.
-            account_name: Name to use for the account.
+            account_name: Force a single account name. If None (default), the
+                account is auto-detected per statement (savings vs GBP main).
         """
         if isinstance(pdf_paths, (str, Path)):
             pdf_paths = [pdf_paths]
         self.pdf_paths = [Path(p) for p in pdf_paths]
         self.account_name = account_name
         self._transactions = self._parse_all_pdfs()
+
+    def _detect_account_name(self, text: str) -> str:
+        """Determine which LemFi account a statement belongs to from its header."""
+        if self.account_name:
+            return self.account_name
+        if 'Savings Account' in text or 'Savings Account Overview' in text:
+            return "LemFi Instant Access Savings"
+        return "LemFi GBP Account"
 
     def _parse_all_pdfs(self) -> pd.DataFrame:
         all_transactions = []
@@ -84,6 +101,11 @@ class LemFiBankAdapter:
         with pdfplumber.open(pdf_path) as pdf:
             text = '\n'.join((p.extract_text() or '') for p in pdf.pages)
 
+        account_name = self._detect_account_name(text)
+        # The GBP wallet is a pass-through current account; the other is savings.
+        account_type = (AccountType.SAVINGS.value if 'Savings' in account_name
+                        else AccountType.CURRENT.value)
+
         transactions = []
         for line in text.split('\n'):
             m = self._TXN_RE.match(line.strip())
@@ -109,8 +131,8 @@ class LemFiBankAdapter:
             transactions.append({
                 'date': date,
                 'time': m.group('time'),
-                'account': self.account_name,
-                'account_type': AccountType.SAVINGS.value,
+                'account': account_name,
+                'account_type': account_type,
                 'transaction_type': txn_type,
                 'category': category,
                 'amount': amount,
@@ -118,7 +140,7 @@ class LemFiBankAdapter:
                 'asset_ticker': None,
                 'units': None,
                 'price_per_unit': None,
-                'notes': f"Payee: {self.account_name} | Description: {desc}",
+                'notes': f"Payee: {account_name} | Description: {desc}",
                 'country': 'UK',
                 'city': None,
                 'is_pension_contribution': False,

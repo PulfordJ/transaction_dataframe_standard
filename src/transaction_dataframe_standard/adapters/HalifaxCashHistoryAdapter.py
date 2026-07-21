@@ -309,6 +309,11 @@ class HalifaxCashHistoryAdapter:
         """Map Halifax fund names to tickers."""
         fund_lower = fund_name.lower()
 
+        # iShares Physical Gold ETC (name is truncated to "ISHARES PHYSICAL M
+        # ISHS" on the transaction line; "PHYS GOLD ETC" is on the next line).
+        if 'ishares physical' in fund_lower:
+            return 'SGLN'
+
         # HSBC FTSE All World Index Fund
         if 'hsbc' in fund_lower and ('all world' in fund_lower or 'ftse all' in fund_lower or 'idx tkr' in fund_lower):
             return 'MDAABG'
